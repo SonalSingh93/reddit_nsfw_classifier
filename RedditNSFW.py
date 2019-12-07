@@ -10,12 +10,17 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 from sklearn.neural_network import MLPClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import TruncatedSVD
 from sklearn.svm import SVC
 from sklearn.svm import LinearSVC
 from gensim import models
 import numpy as np
 import sys
+import nltk
+from nltk.corpus import stopwords
 
+nltk.download('stopwords')
 
 def get_posts(subreddit, time_frame, after=None, count=None):
     url = "http://reddit.com/r/" + subreddit + "/top.json?t=" + time_frame + "&limit=100"
@@ -296,3 +301,30 @@ print("Accuracy: " + str(accuracy))
 print("Precision: " + str(precision))
 print("Recall: " + str(recall))
 print("F1: " + str(f1))
+
+# ############################################################# SVD - LSA for topic modelling
+
+
+vectorizer = TfidfVectorizer()
+
+all_post_text = []
+stop_words = set(stopwords.words('english'))
+for post in all_processed_posts:
+    filtered_post = [w for w in post['text'].split() if not w in stop_words]
+    all_post_text.append(' '.join(filtered_post))
+
+X = vectorizer.fit_transform(all_post_text)
+tfidf_vocabulary = vectorizer.vocabulary_
+
+svd_model = TruncatedSVD(n_components=30, algorithm='randomized', n_iter=100, random_state=122)
+svd_model.fit(X)
+
+
+terms = vectorizer.get_feature_names()
+
+for i, comp in enumerate(svd_model.components_):
+    terms_comp = zip(terms, comp)
+    sorted_terms = sorted(terms_comp, key= lambda x:x[1], reverse=True)[:10]
+    print("Topic {}: {}".format(str(i),[w[0] for w in sorted_terms]))
+    for t in sorted_terms:
+        print(t[0])
